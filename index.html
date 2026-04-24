@@ -115,8 +115,8 @@
     </div>
 
     <script>
-        // --- VPS CONFIG WITH DOMAIN ---
-        const VPS_URL = "https://crash.danuwa.online"; // Domain එක HTTPS කරලා තියෙන්නේ
+        // --- FIXED VPS CONFIG ---
+        const VPS_URL = "https://crash.danuwa.online"; 
 
         const fCfg = { databaseURL: "https://crash-ball-sri-lanka-default-rtdb.firebaseio.com/" };
         firebase.initializeApp(fCfg);
@@ -170,7 +170,6 @@
             });
         }
 
-        // Game Logic
         const cvs = document.getElementById('gameCanvas'); const ctx = cvs.getContext('2d');
         cvs.width = 400; cvs.height = 260;
 
@@ -199,11 +198,10 @@
             let crashPoint = 1.10; 
 
             try {
-                // DOMAIN FETCH WITH HTTPS
                 const response = await fetch(VPS_URL);
                 const data = await response.json();
                 crashPoint = parseFloat(data.crashAt);
-                console.log("VPS Target: " + crashPoint);
+                console.log("Connected to VPS! Crash At: " + crashPoint);
             } catch (e) {
                 console.error("VPS Fail:", e);
                 crashPoint = (1.05 + Math.random() * 0.2).toFixed(2);
