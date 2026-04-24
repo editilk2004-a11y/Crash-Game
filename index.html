@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CRASH LINE - LIVE PRO</title>
+    <title>CRASH LINE PRO - LIVE</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     <style>
@@ -61,12 +61,12 @@
                 <button class="btn" style="background:#1e293b; color:white;" onclick="showA('reg')">REGISTER</button>
             </div>
             <div id="auth-reg" style="display:none;">
-                <p><input type="checkbox" id="age-check"> Over 18 Confirmation</p>
-                <button class="btn btn-blue" onclick="makeAccount()">GENERATE ID</button>
+                <p><input type="checkbox" id="age-check"> Confirm Over 18</p>
+                <button class="btn btn-blue" onclick="makeAccount()">CREATE ACCOUNT</button>
                 <button class="btn" style="background:none; color:#64748b; font-size:12px; margin-top:5px;" onclick="showA('main')">BACK</button>
             </div>
             <div id="auth-login" style="display:none;">
-                <input type="text" id="l-id" placeholder="10-Digit ID" style="margin-bottom:8px;">
+                <input type="text" id="l-id" placeholder="User ID" style="margin-bottom:8px;">
                 <input type="password" id="l-ps" placeholder="Password">
                 <button class="btn btn-blue" style="margin-top:10px" onclick="doLogin()">LOGIN</button>
                 <button class="btn" style="background:none; color:#64748b; font-size:12px; margin-top:5px;" onclick="showA('main')">BACK</button>
@@ -101,7 +101,10 @@
             <input type="number" id="bet-amt" value="20">
             <button id="bet-btn" class="btn btn-blue" style="margin-top:15px; height:60px;" onclick="handleAction()">PLACE BET</button>
         </div>
-        <div style="width:95%; margin-top:15px; font-size:12px; color:#64748b; font-weight:bold; padding-left:5px;">LIVE PLAYERS ONLINE</div>
+        <div style="width:95%; margin-top:15px; font-size:12px; color:#64748b; font-weight:bold; padding-left:5px; display:flex; justify-content:space-between;">
+            <span>REAL PLAYERS HISTORY</span>
+            <span id="online-count" style="color:var(--green);">LOADING...</span>
+        </div>
         <div id="p-list" style="width:95%; height:150px; background:#080b12; margin-top:5px; border-radius:10px; overflow-y:auto; font-size:11px; border:1px solid #111;"></div>
     </div>
 
@@ -125,7 +128,7 @@
         let user = null, isBet = false, isCash = false, isLive = false, curM = 1.0;
         let totalW = 0, totalD = 0;
 
-        // UI Handlers
+        // Init
         setTimeout(() => { document.getElementById('scr-load').style.display='none'; nav('scr-auth'); }, 3000);
         function nav(id) { document.querySelectorAll('.screen').forEach(s => s.classList.remove('active')); document.getElementById(id).classList.add('active'); }
         function showA(s) {
@@ -135,9 +138,9 @@
             document.getElementById('auth-login').style.display = (s=='login'?'block':'none');
         }
 
-        // Account Logic
+        // Account logic
         function makeAccount() {
-            if(!document.getElementById('age-check').checked) return alert("Required!");
+            if(!document.getElementById('age-check').checked) return alert("Confirm Age!");
             let id = "16" + Math.floor(10000000 + Math.random() * 89999999);
             let ps = Math.random().toString(36).slice(-8);
             db.ref('players/'+id).set({id, ps, balance:0, win:0, dep:0}).then(() => {
@@ -149,7 +152,7 @@
             const id = document.getElementById('p-id').innerText;
             const ps = document.getElementById('p-ps').innerText.replace("PS: ", "");
             navigator.clipboard.writeText(id + " | " + ps);
-            alert("ID Copied!"); showA('login');
+            alert("Credentials Copied!"); showA('login');
             document.getElementById('l-id').value = id;
             document.getElementById('l-ps').value = ps;
         }
@@ -166,38 +169,39 @@
                         document.getElementById('bal').innerText = "LKR " + user.balance.toFixed(2); }
                     });
                     nav('scr-game'); startRound();
-                } else alert("Invalid Login Details!");
+                } else alert("Error: User not found or wrong password.");
             });
         }
 
-        // --- UPDATED REAL LIVE PLAYER LIST ---
-        function updateLivePlayers() {
+        // --- REAL-TIME LIVE LIST ---
+        function updateLiveList() {
             db.ref('players').on('value', (snapshot) => {
                 const players = snapshot.val();
-                let h = "";
+                let htmlStr = "";
                 if (players) {
-                    for (let id in players) {
+                    let pArray = Object.keys(players);
+                    document.getElementById('online-count').innerText = pArray.length + " ONLINE";
+                    pArray.reverse().slice(0,20).forEach(id => {
                         let p = players[id];
-                        h += `<div style="padding:12px; border-bottom:1px solid #1a2233; display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.02); margin-bottom:2px;">
+                        htmlStr += `<div style="padding:12px; border-bottom:1px solid #1a2233; display:flex; justify-content:space-between; align-items:center; background:rgba(0,123,255,0.02); margin-bottom:2px;">
                             <span style="color:#64748b; font-family:monospace;">ID: ***${id.slice(-4)}</span>
                             <span style="color:var(--green); font-weight:bold;">LKR ${parseFloat(p.balance || 0).toFixed(2)}</span>
                         </div>`;
-                    }
-                } else {
-                    h = "<div style='padding:20px; color:#444; text-align:center;'>Waiting for players...</div>";
+                    });
                 }
-                document.getElementById('p-list').innerHTML = h;
+                document.getElementById('p-list').innerHTML = htmlStr;
             });
         }
-        updateLivePlayers(); // ලොගින් වෙන්න කලින්ම ලිස්ට් එක පටන් ගන්නවා
+        updateLiveList();
 
-        // --- GAME ENGINE ---
+        // --- GAME SYSTEM ---
         const cvs = document.getElementById('gameCanvas'); const ctx = cvs.getContext('2d');
         cvs.width = 400; cvs.height = 260;
 
         function adj(v) {
             let cur = parseInt(document.getElementById('bet-amt').value) || 0;
-            document.getElementById('bet-amt').value = (v == 'max') ? Math.floor(user.balance) : cur + v;
+            if(v === 'max') document.getElementById('bet-amt').value = Math.floor(user.balance);
+            else document.getElementById('bet-amt').value = cur + v;
         }
 
         function startRound() {
@@ -209,7 +213,7 @@
             
             let t = 10;
             let timer = setInterval(() => {
-                document.getElementById('next-timer').innerText = "Next Round: " + t + "s";
+                document.getElementById('next-timer').innerText = "Starting: " + t + "s";
                 if(t <= 0) { clearInterval(timer); runGame(); } t--;
             }, 1000);
         }
@@ -219,25 +223,25 @@
             let crashPoint = 1.10; 
 
             try {
-                const response = await fetch(VPS_URL);
-                const data = await response.json();
+                const res = await fetch(VPS_URL);
+                const data = await res.json();
                 crashPoint = parseFloat(data.crashAt);
-                console.log("Live VPS Connection: OK");
+                console.log("VPS Linked Successfully");
             } catch (e) {
-                crashPoint = (1.05 + Math.random() * 0.5).toFixed(2);
-                console.log("VPS Error, using fail-safe.");
+                crashPoint = (1.02 + Math.random() * 2).toFixed(2);
+                console.log("Using Local Logic (VPS Offline)");
             }
 
             let start = Date.now();
             let loop = setInterval(() => {
-                let e = (Date.now() - start) / 1000;
-                curM = Math.pow(1.075, e * 1.5);
+                let elapsed = (Date.now() - start) / 1000;
+                curM = Math.pow(1.075, elapsed * 1.5);
                 document.getElementById('mult-val').innerText = curM.toFixed(2) + "x";
 
                 ctx.clearRect(0,0,400,260);
                 ctx.beginPath(); ctx.strokeStyle = "#007bff"; ctx.lineWidth = 5;
                 ctx.moveTo(0, 260);
-                for(let i=0; i<e*40; i++) ctx.lineTo(i*6, 260 - (Math.pow(1.075, (i/7)*1.5)*20));
+                for(let i=0; i<elapsed*40; i++) ctx.lineTo(i*6, 260 - (Math.pow(1.075, (i/7)*1.5)*20));
                 ctx.stroke();
 
                 if(curM >= crashPoint) {
@@ -253,7 +257,7 @@
         function handleAction() {
             let amt = parseInt(document.getElementById('bet-amt').value);
             if(!isLive && !isBet) {
-                if(!user || user.balance < amt || amt < 20) return alert("Insufficient Balance!");
+                if(!user || user.balance < amt || amt < 20) return alert("Balance too low!");
                 db.ref('players/'+user.id).update({balance: user.balance - amt});
                 isBet = true;
                 document.getElementById('bet-btn').innerText = "CASH OUT";
@@ -263,7 +267,7 @@
                 totalW += winAmt;
                 db.ref('players/'+user.id).update({balance: user.balance + winAmt, win: totalW});
                 isCash = true;
-                document.getElementById('bet-btn').innerText = "WINNER!";
+                document.getElementById('bet-btn').innerText = "WON!";
                 document.getElementById('status-overlay').style.display = 'flex';
                 document.getElementById('status-msg').innerHTML = `<div class="win-txt">WIN LKR ${winAmt.toFixed(2)}</div>`;
             }
@@ -274,10 +278,10 @@
             let box = document.getElementById('wd-res');
             box.style.display = "block";
             if(totalW < (totalD * 1.1) || amt < 1000 || amt > user.balance) {
-                box.style.color = "red"; box.innerText = "Rejected! Turnover requirement not met.";
+                box.style.color = "red"; box.innerText = "Error: Turnover not reached or insufficient funds.";
             } else {
                 db.ref('players/'+user.id).update({balance: user.balance - amt}).then(() => {
-                    box.style.color = "lime"; box.innerHTML = "WITHDRAWAL REQUEST SENT! ✅";
+                    box.style.color = "lime"; box.innerHTML = "REQUEST SENT SUCCESSFULLY! ✅";
                 });
             }
         }
