@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CRASH LINE - VPS DOMAIN PRO</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <style>
+        :root { --blue: #007bff; --dark: #05070a; --panel: #0e121a; --green: #00ff88; --red: #ff3333; --gold: #ffd700; }
+        body, html { margin: 0; padding: 0; background: var(--dark); color: white; font-family: 'Segoe UI', sans-serif; height: 100vh; overflow: hidden; }
+
+        /* LOADING SYSTEM */
+        #scr-load { position: fixed; inset: 0; background: radial-gradient(circle, #0e1b2e 0%, #05070a 100%); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .load-logo { font-size: 35px; font-weight: 900; color: var(--blue); letter-spacing: 5px; margin-bottom: 25px; animation: pulse 1.5s infinite; }
+        .load-bar { width: 250px; height: 6px; background: #1a2233; border-radius: 10px; overflow: hidden; border: 1px solid #333; }
+        .load-fill { width: 0%; height: 100%; background: var(--blue); animation: progress 4s linear forwards; box-shadow: 0 0 15px var(--blue); }
+        @keyframes progress { to { width: 100%; } }
+        @keyframes pulse { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(0.95); opacity: 0.8; } }
+
+        /* SCREENS */
+        .screen { display: none; height: 100vh; width: 100%; flex-direction: column; align-items: center; justify-content: center; position: absolute; }
+        .active { display: flex; }
+        .glass { background: var(--panel); padding: 25px; border-radius: 20px; width: 88%; max-width: 360px; text-align: center; border: 1px solid #1e293b; box-shadow: 0 20px 40px rgba(0,0,0,0.7); }
+
+        /* HEADER */
+        .header { position: fixed; top: 0; width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 12px 15px; background: #0e121a; z-index: 1000; border-bottom: 1px solid #1e293b; box-sizing: border-box; }
+        .bal-val { color: var(--green); font-weight: 900; font-size: 17px; background: #000; padding: 6px 15px; border-radius: 20px; border: 1px solid #222; }
+
+        /* GAME AREA */
+        .game-box { width: 95%; height: 260px; background: radial-gradient(circle, #0f172a 0%, #05070a 100%); margin-top: 80px; border-radius: 15px; position: relative; border: 1px solid #1e293b; overflow: hidden; }
+        #mult-val { position: absolute; top: 38%; left: 50%; transform: translate(-50%, -50%); font-size: 65px; font-weight: 900; z-index: 10; text-shadow: 0 0 20px #000; }
+        canvas { width: 100%; height: 100%; }
+        
+        #status-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.8); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 50; }
+        .crash-txt { color: var(--red); font-size: 30px; font-weight: 900; margin-bottom: 10px; }
+        .win-txt { color: var(--green); font-size: 25px; font-weight: 900; }
+
+        /* CONTROLS */
+        .control-unit { width: 95%; margin-top: 15px; background: #0e121a; padding: 15px; border-radius: 15px; border: 1px solid #1e293b; box-sizing: border-box; }
+        .amt-input-grp { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+        .amt-btn { background: #1e293b; border: 1px solid #333; color: white; padding: 10px; border-radius: 8px; font-weight: bold; cursor: pointer; flex: 1; font-size: 12px; }
+        input { width: 100%; padding: 14px; background: #000; border: 1px solid #2d3748; color: var(--gold); border-radius: 10px; text-align: center; font-weight: bold; font-size: 18px; outline: none; }
+        
+        .btn { width: 100%; padding: 16px; border: none; border-radius: 10px; font-weight: 900; cursor: pointer; transition: 0.2s; text-transform: uppercase; letter-spacing: 1px; }
+        .btn-blue { background: linear-gradient(90deg, #0052cc, #007bff); color: white; box-shadow: 0 5px 15px rgba(0,123,255,0.4); }
+    </style>
+</head>
+<body>
+
+    <div id="scr-load">
+        <div class="load-logo">CRASH LINE</div>
+        <div class="load-bar"><div class="load-fill"></div></div>
+    </div>
+
+    <div id="scr-auth" class="screen">
+        <div class="glass">
+            <h2 style="color:var(--blue); margin-bottom:20px;">CRASH LINE</h2>
+            <div id="auth-main">
+                <button class="btn btn-blue" style="margin-bottom:10px" onclick="showA('login')">LOGIN</button>
+                <button class="btn" style="background:#1e293b; color:white;" onclick="showA('reg')">REGISTER</button>
+            </div>
+            <div id="auth-reg" style="display:none;">
+                <p><input type="checkbox" id="age-check"> Over 18 Confirmation</p>
+                <button class="btn btn-blue" onclick="makeAccount()">GENERATE ID</button>
+                <button class="btn" style="background:none; color:#64748b; font-size:12px; margin-top:5px;" onclick="showA('main')">BACK</button>
+            </div>
+            <div id="auth-login" style="display:none;">
+                <input type="text" id="l-id" placeholder="10-Digit ID" style="margin-bottom:8px;">
+                <input type="password" id="l-ps" placeholder="Password">
+                <button class="btn btn-blue" style="margin-top:10px" onclick="doLogin()">LOGIN</button>
+                <button class="btn" style="background:none; color:#64748b; font-size:12px; margin-top:5px;" onclick="showA('main')">BACK</button>
+            </div>
+            <div id="reg-done" style="display:none; background:var(--green); color:black; padding:20px; border-radius:15px;">
+                <h3 id="p-id" style="margin:5px 0;"></h3>
+                <p id="p-ps" style="margin:5px 0; font-weight:bold;"></p>
+                <button class="btn" style="background:black; color:white; margin-top:10px;" onclick="copyGo()">COPY & LOGIN</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="scr-game" class="screen" style="justify-content:flex-start">
+        <div class="header">
+            <button onclick="nav('scr-wd')" style="background:var(--red); border:none; color:white; padding:8px 15px; border-radius:8px; font-weight:bold; font-size:12px;">WITHDRAW</button>
+            <div id="bal" class="bal-val">LKR 0.00</div>
+            <button onclick="window.open('https://t.me/UltraPodda')" style="background:var(--blue); border:none; color:white; padding:8px 15px; border-radius:8px; font-weight:bold; font-size:12px;">DEPOSIT</button>
+        </div>
+        <div class="game-box">
+            <div id="mult-val">1.00x</div>
+            <canvas id="gameCanvas"></canvas>
+            <div id="status-overlay"><div id="status-msg"></div></div>
+            <div id="next-timer" style="position:absolute; bottom:12px; right:12px; background:rgba(0,0,0,0.8); padding:5px 12px; border-radius:20px; font-size:11px; border:1px solid var(--blue);">Next: 10s</div>
+        </div>
+        <div class="control-unit">
+            <div class="amt-input-grp">
+                <button class="amt-btn" onclick="adj(20)">+20</button>
+                <button class="amt-btn" onclick="adj(100)">+100</button>
+                <button class="amt-btn" onclick="adj(500)">+500</button>
+                <button class="amt-btn" onclick="adj('max')">MAX</button>
+            </div>
+            <input type="number" id="bet-amt" value="20">
+            <button id="bet-btn" class="btn btn-blue" style="margin-top:15px; height:60px;" onclick="handleAction()">PLACE BET</button>
+        </div>
+        <div id="p-list" style="width:95%; height:150px; background:#080b12; margin-top:15px; border-radius:10px; overflow-y:auto; font-size:11px; border:1px solid #111;"></div>
+    </div>
+
+    <div id="scr-wd" class="screen">
+        <div class="glass">
+            <h3>WITHDRAWAL</h3>
+            <input type="number" id="wd-amt" placeholder="Enter Amount (LKR)">
+            <button class="btn btn-blue" style="margin-top:10px" onclick="checkWithdraw()">REQUEST</button>
+            <button class="btn" style="background:none; color:#64748b;" onclick="nav('scr-game')">BACK</button>
+            <div id="wd-res" style="margin-top:15px; display:none; font-weight:bold;"></div>
+        </div>
+    </div>
+
+    <script>
+        // --- VPS CONFIG WITH DOMAIN ---
+        const VPS_URL = "https://crash.danuwa.online"; // Domain එක HTTPS කරලා තියෙන්නේ
+
+        const fCfg = { databaseURL: "https://crash-ball-sri-lanka-default-rtdb.firebaseio.com/" };
+        firebase.initializeApp(fCfg);
+        const db = firebase.database();
+
+        let user = null, isBet = false, isCash = false, isLive = false, curM = 1.0;
+        let totalW = 0, totalD = 0;
+
+        // UI Helpers
+        setTimeout(() => { document.getElementById('scr-load').style.display='none'; nav('scr-auth'); }, 4000);
+        function nav(id) { document.querySelectorAll('.screen').forEach(s => s.classList.remove('active')); document.getElementById(id).classList.add('active'); }
+        function showA(s) {
+            document.getElementById('auth-main').style.display = (s=='main'?'block':'none');
+            document.getElementById('auth-reg').style.display = (s=='reg'?'block':'none');
+            document.getElementById('reg-done').style.display = (s=='done'?'block':'none');
+            document.getElementById('auth-login').style.display = (s=='login'?'block':'none');
+        }
+
+        // Firebase Auth
+        function makeAccount() {
+            if(!document.getElementById('age-check').checked) return alert("Required!");
+            let id = "16" + Math.floor(10000000 + Math.random() * 89999999);
+            let ps = Math.random().toString(36).slice(-8);
+            db.ref('players/'+id).set({id, ps, balance:0, win:0, dep:0}).then(() => {
+                showA('done'); document.getElementById('p-id').innerText = id; document.getElementById('p-ps').innerText = "PS: " + ps;
+            });
+        }
+
+        function copyGo() {
+            const id = document.getElementById('p-id').innerText;
+            const ps = document.getElementById('p-ps').innerText.replace("PS: ", "");
+            navigator.clipboard.writeText(id + " | " + ps);
+            alert("Copied!"); showA('login');
+            document.getElementById('l-id').value = id;
+            document.getElementById('l-ps').value = ps;
+        }
+
+        function doLogin() {
+            let id = document.getElementById('l-id').value;
+            let ps = document.getElementById('l-ps').value;
+            db.ref('players/'+id).once('value', s => {
+                let d = s.val();
+                if(d && d.ps == ps) {
+                    user = d;
+                    db.ref('players/'+id).on('value', sn => {
+                        let v = sn.val(); user.balance = v.balance; totalW = v.win || 0; totalD = v.dep || 0;
+                        document.getElementById('bal').innerText = "LKR " + user.balance.toFixed(2);
+                    });
+                    nav('scr-game'); startRound();
+                } else alert("Invalid Login!");
+            });
+        }
+
+        // Game Logic
+        const cvs = document.getElementById('gameCanvas'); const ctx = cvs.getContext('2d');
+        cvs.width = 400; cvs.height = 260;
+
+        function adj(v) {
+            let cur = parseInt(document.getElementById('bet-amt').value) || 0;
+            document.getElementById('bet-amt').value = (v == 'max') ? Math.floor(user.balance) : cur + v;
+        }
+
+        function startRound() {
+            isLive = false; isCash = false; curM = 1.0;
+            document.getElementById('bet-btn').innerText = "PLACE BET";
+            document.getElementById('bet-btn').style.background = "var(--blue)";
+            document.getElementById('status-overlay').style.display = 'none';
+            document.getElementById('mult-val').innerText = "1.00x";
+            
+            let t = 10;
+            let timer = setInterval(() => {
+                document.getElementById('next-timer').innerText = "Next: " + t + "s";
+                if(t <= 0) { clearInterval(timer); runGame(); } t--;
+            }, 1000);
+            updateFakes();
+        }
+
+        async function runGame() {
+            isLive = true;
+            let crashPoint = 1.10; 
+
+            try {
+                // DOMAIN FETCH WITH HTTPS
+                const response = await fetch(VPS_URL);
+                const data = await response.json();
+                crashPoint = parseFloat(data.crashAt);
+                console.log("VPS Target: " + crashPoint);
+            } catch (e) {
+                console.error("VPS Fail:", e);
+                crashPoint = (1.05 + Math.random() * 0.2).toFixed(2);
+            }
+
+            let start = Date.now();
+            let loop = setInterval(() => {
+                let e = (Date.now() - start) / 1000;
+                curM = Math.pow(1.075, e * 1.5);
+                document.getElementById('mult-val').innerText = curM.toFixed(2) + "x";
+
+                ctx.clearRect(0,0,400,260);
+                ctx.beginPath(); ctx.strokeStyle = "#007bff"; ctx.lineWidth = 5;
+                ctx.moveTo(0, 260);
+                for(let i=0; i<e*40; i++) ctx.lineTo(i*6, 260 - (Math.pow(1.075, (i/7)*1.5)*20));
+                ctx.stroke();
+
+                if(curM >= crashPoint) {
+                    clearInterval(loop); isLive = false;
+                    document.getElementById('status-overlay').style.display = 'flex';
+                    document.getElementById('status-msg').innerHTML = `<div class="crash-txt">CRASHED @ ${curM.toFixed(2)}x</div>`;
+                    if(isBet && !isCash) isBet = false;
+                    setTimeout(startRound, 3500);
+                }
+            }, 60);
+        }
+
+        function handleAction() {
+            let amt = parseInt(document.getElementById('bet-amt').value);
+            if(!isLive && !isBet) {
+                if(user.balance < amt || amt < 20) return alert("Check Balance!");
+                db.ref('players/'+user.id).update({balance: user.balance - amt});
+                isBet = true;
+                document.getElementById('bet-btn').innerText = "CASH OUT";
+                document.getElementById('bet-btn').style.background = "var(--green)";
+            } else if(isBet && !isCash && isLive) {
+                let winAmt = amt * curM;
+                totalW += winAmt;
+                db.ref('players/'+user.id).update({balance: user.balance + winAmt, win: totalW});
+                isCash = true;
+                document.getElementById('bet-btn').innerText = "WINNER!";
+                document.getElementById('status-overlay').style.display = 'flex';
+                document.getElementById('status-msg').innerHTML = `<div class="win-txt">WIN LKR ${winAmt.toFixed(2)}</div>`;
+            }
+        }
+
+        function checkWithdraw() {
+            let amt = parseInt(document.getElementById('wd-amt').value);
+            let box = document.getElementById('wd-res');
+            box.style.display = "block";
+            if(totalW < (totalD * 1.1) || amt < 1000 || amt > user.balance) {
+                box.style.color = "red"; box.innerText = "Rejected! Insufficient Turnover.";
+            } else {
+                db.ref('players/'+user.id).update({balance: user.balance - amt}).then(() => {
+                    box.style.color = "lime"; box.innerHTML = "APPROVED! ✅";
+                });
+            }
+        }
+
+        function updateFakes() {
+            let h = "";
+            for(let i=0; i<15; i++) {
+                let win = Math.random() > 0.7;
+                h += `<div style="padding:5px; border-bottom:1px solid #111; display:flex; justify-content:space-between;">
+                    <span>ID: ***${Math.floor(100+Math.random()*800)}</span>
+                    <span style="color:${win?'#00ff88':'#666'}">LKR ${Math.floor(20+Math.random()*1000)} ${win?'(Win)':''}</span>
+                </div>`;
+            }
+            document.getElementById('p-list').innerHTML = h;
+        }
+    </script>
+</body>
+</html>
