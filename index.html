@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CRASH LINE - VPS DOMAIN PRO</title>
+    <title>CRASH LINE - LIVE PRO</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     <style>
@@ -14,7 +14,7 @@
         #scr-load { position: fixed; inset: 0; background: radial-gradient(circle, #0e1b2e 0%, #05070a 100%); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; }
         .load-logo { font-size: 35px; font-weight: 900; color: var(--blue); letter-spacing: 5px; margin-bottom: 25px; animation: pulse 1.5s infinite; }
         .load-bar { width: 250px; height: 6px; background: #1a2233; border-radius: 10px; overflow: hidden; border: 1px solid #333; }
-        .load-fill { width: 0%; height: 100%; background: var(--blue); animation: progress 4s linear forwards; box-shadow: 0 0 15px var(--blue); }
+        .load-fill { width: 0%; height: 100%; background: var(--blue); animation: progress 3s linear forwards; box-shadow: 0 0 15px var(--blue); }
         @keyframes progress { to { width: 100%; } }
         @keyframes pulse { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(0.95); opacity: 0.8; } }
 
@@ -101,7 +101,8 @@
             <input type="number" id="bet-amt" value="20">
             <button id="bet-btn" class="btn btn-blue" style="margin-top:15px; height:60px;" onclick="handleAction()">PLACE BET</button>
         </div>
-        <div id="p-list" style="width:95%; height:150px; background:#080b12; margin-top:15px; border-radius:10px; overflow-y:auto; font-size:11px; border:1px solid #111;"></div>
+        <div style="width:95%; margin-top:15px; font-size:12px; color:#64748b; font-weight:bold; padding-left:5px;">LIVE PLAYERS</div>
+        <div id="p-list" style="width:95%; height:150px; background:#080b12; margin-top:5px; border-radius:10px; overflow-y:auto; font-size:11px; border:1px solid #111;"></div>
     </div>
 
     <div id="scr-wd" class="screen">
@@ -115,9 +116,8 @@
     </div>
 
     <script>
-        // --- FIXED VPS CONFIG ---
+        // --- CONFIG ---
         const VPS_URL = "https://crash.danuwa.online"; 
-
         const fCfg = { databaseURL: "https://crash-ball-sri-lanka-default-rtdb.firebaseio.com/" };
         firebase.initializeApp(fCfg);
         const db = firebase.database();
@@ -125,8 +125,8 @@
         let user = null, isBet = false, isCash = false, isLive = false, curM = 1.0;
         let totalW = 0, totalD = 0;
 
-        // UI Helpers
-        setTimeout(() => { document.getElementById('scr-load').style.display='none'; nav('scr-auth'); }, 4000);
+        // Navigation
+        setTimeout(() => { document.getElementById('scr-load').style.display='none'; nav('scr-auth'); }, 3000);
         function nav(id) { document.querySelectorAll('.screen').forEach(s => s.classList.remove('active')); document.getElementById(id).classList.add('active'); }
         function showA(s) {
             document.getElementById('auth-main').style.display = (s=='main'?'block':'none');
@@ -135,7 +135,7 @@
             document.getElementById('auth-login').style.display = (s=='login'?'block':'none');
         }
 
-        // Firebase Auth
+        // Firebase Auth Logic
         function makeAccount() {
             if(!document.getElementById('age-check').checked) return alert("Required!");
             let id = "16" + Math.floor(10000000 + Math.random() * 89999999);
@@ -165,11 +165,28 @@
                         let v = sn.val(); user.balance = v.balance; totalW = v.win || 0; totalD = v.dep || 0;
                         document.getElementById('bal').innerText = "LKR " + user.balance.toFixed(2);
                     });
-                    nav('scr-game'); startRound();
+                    nav('scr-game'); startRound(); updateLivePlayers(); // Start Live Updates
                 } else alert("Invalid Login!");
             });
         }
 
+        // --- REAL LIVE PLAYER LIST ---
+        function updateLivePlayers() {
+            db.ref('players').limitToLast(20).on('value', (snapshot) => {
+                let players = snapshot.val();
+                let h = "";
+                for (let id in players) {
+                    let p = players[id];
+                    h += `<div style="padding:10px; border-bottom:1px solid #111; display:flex; justify-content:space-between; align-items:center;">
+                        <span style="color:#64748b;">ID: ***${id.slice(-4)}</span>
+                        <span style="color:var(--green); font-weight:bold;">LKR ${parseFloat(p.balance).toFixed(2)}</span>
+                    </div>`;
+                }
+                document.getElementById('p-list').innerHTML = h;
+            });
+        }
+
+        // --- GAME ENGINE ---
         const cvs = document.getElementById('gameCanvas'); const ctx = cvs.getContext('2d');
         cvs.width = 400; cvs.height = 260;
 
@@ -190,7 +207,6 @@
                 document.getElementById('next-timer').innerText = "Next: " + t + "s";
                 if(t <= 0) { clearInterval(timer); runGame(); } t--;
             }, 1000);
-            updateFakes();
         }
 
         async function runGame() {
@@ -201,10 +217,8 @@
                 const response = await fetch(VPS_URL);
                 const data = await response.json();
                 crashPoint = parseFloat(data.crashAt);
-                console.log("Connected to VPS! Crash At: " + crashPoint);
             } catch (e) {
-                console.error("VPS Fail:", e);
-                crashPoint = (1.05 + Math.random() * 0.2).toFixed(2);
+                crashPoint = (1.02 + Math.random() * 0.5).toFixed(2);
             }
 
             let start = Date.now();
@@ -213,6 +227,7 @@
                 curM = Math.pow(1.075, e * 1.5);
                 document.getElementById('mult-val').innerText = curM.toFixed(2) + "x";
 
+                // Draw Graph
                 ctx.clearRect(0,0,400,260);
                 ctx.beginPath(); ctx.strokeStyle = "#007bff"; ctx.lineWidth = 5;
                 ctx.moveTo(0, 260);
@@ -223,8 +238,8 @@
                     clearInterval(loop); isLive = false;
                     document.getElementById('status-overlay').style.display = 'flex';
                     document.getElementById('status-msg').innerHTML = `<div class="crash-txt">CRASHED @ ${curM.toFixed(2)}x</div>`;
-                    if(isBet && !isCash) isBet = false;
-                    setTimeout(startRound, 3500);
+                    if(isBet && !isCash) isBet = false; 
+                    setTimeout(startRound, 3000);
                 }
             }, 60);
         }
@@ -232,7 +247,7 @@
         function handleAction() {
             let amt = parseInt(document.getElementById('bet-amt').value);
             if(!isLive && !isBet) {
-                if(user.balance < amt || amt < 20) return alert("Check Balance!");
+                if(user.balance < amt || amt < 20) return alert("Low Balance!");
                 db.ref('players/'+user.id).update({balance: user.balance - amt});
                 isBet = true;
                 document.getElementById('bet-btn').innerText = "CASH OUT";
@@ -253,24 +268,12 @@
             let box = document.getElementById('wd-res');
             box.style.display = "block";
             if(totalW < (totalD * 1.1) || amt < 1000 || amt > user.balance) {
-                box.style.color = "red"; box.innerText = "Rejected! Insufficient Turnover.";
+                box.style.color = "red"; box.innerText = "Rejected! Play more to unlock.";
             } else {
                 db.ref('players/'+user.id).update({balance: user.balance - amt}).then(() => {
-                    box.style.color = "lime"; box.innerHTML = "APPROVED! ✅";
+                    box.style.color = "lime"; box.innerHTML = "REQUEST SENT! ✅";
                 });
             }
-        }
-
-        function updateFakes() {
-            let h = "";
-            for(let i=0; i<15; i++) {
-                let win = Math.random() > 0.7;
-                h += `<div style="padding:5px; border-bottom:1px solid #111; display:flex; justify-content:space-between;">
-                    <span>ID: ***${Math.floor(100+Math.random()*800)}</span>
-                    <span style="color:${win?'#00ff88':'#666'}">LKR ${Math.floor(20+Math.random()*1000)} ${win?'(Win)':''}</span>
-                </div>`;
-            }
-            document.getElementById('p-list').innerHTML = h;
         }
     </script>
 </body>
