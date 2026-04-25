@@ -1,289 +1,392 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="si">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CRASH LINE PRO - LIVE</title>
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Ball Crash Pro - Final Stable</title>
+    
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+
     <style>
-        :root { --blue: #007bff; --dark: #05070a; --panel: #0e121a; --green: #00ff88; --red: #ff3333; --gold: #ffd700; }
-        body, html { margin: 0; padding: 0; background: var(--dark); color: white; font-family: 'Segoe UI', sans-serif; height: 100vh; overflow: hidden; }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Poppins', sans-serif; }
+        body, html { width: 100%; height: 100%; background: #000; color: #fff; overflow: hidden; }
 
-        /* LOADING SYSTEM */
-        #scr-load { position: fixed; inset: 0; background: radial-gradient(circle, #0e1b2e 0%, #05070a 100%); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        .load-logo { font-size: 35px; font-weight: 900; color: var(--blue); letter-spacing: 5px; margin-bottom: 25px; animation: pulse 1.5s infinite; }
-        .load-bar { width: 250px; height: 6px; background: #1a2233; border-radius: 10px; overflow: hidden; border: 1px solid #333; }
-        .load-fill { width: 0%; height: 100%; background: var(--blue); animation: progress 3s linear forwards; box-shadow: 0 0 15px var(--blue); }
-        @keyframes progress { to { width: 100%; } }
-        @keyframes pulse { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(0.95); opacity: 0.8; } }
+        /* --- LOADING SCREEN --- */
+        #loading-screen { width: 100%; height: 100vh; background: #000; display: flex; flex-direction: column; justify-content: center; align-items: center; position: fixed; z-index: 20000; transition: 0.5s; }
+        .load-bar { width: 250px; height: 8px; background: #222; border-radius: 10px; margin-top: 20px; overflow: hidden; border: 1px solid #333; }
+        #load-fill { width: 0%; height: 100%; background: linear-gradient(90deg, #ff0000, #ffcc00); transition: 0.1s; }
 
-        /* SCREENS */
-        .screen { display: none; height: 100vh; width: 100%; flex-direction: column; align-items: center; justify-content: center; position: absolute; }
-        .active { display: flex; }
-        .glass { background: var(--panel); padding: 25px; border-radius: 20px; width: 88%; max-width: 360px; text-align: center; border: 1px solid #1e293b; box-shadow: 0 20px 40px rgba(0,0,0,0.7); }
+        /* --- AUTH --- */
+        #auth-container { width: 100%; height: 100vh; background: #000; display: flex; justify-content: center; align-items: center; position: fixed; z-index: 10000; }
+        .auth-card { background: #111; padding: 30px; border-radius: 25px; width: 350px; text-align: center; border: 1px solid #333; }
+        input { width: 100%; padding: 14px; margin: 10px 0; border-radius: 10px; border: none; background: #222; color: #fff; outline: none; }
+        .btn-ui { width: 100%; padding: 14px; border-radius: 10px; border: none; font-weight: bold; cursor: pointer; transition: 0.3s; margin-top: 10px; }
+        .yellow { background: #ffcc00; color: #000; }
+        .red { background: #ff3300; color: #fff; }
+        .hidden { display: none !important; }
 
-        /* HEADER */
-        .header { position: fixed; top: 0; width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 12px 15px; background: #0e121a; z-index: 1000; border-bottom: 1px solid #1e293b; box-sizing: border-box; }
-        .bal-val { color: var(--green); font-weight: 900; font-size: 17px; background: #000; padding: 6px 15px; border-radius: 20px; border: 1px solid #222; }
+        /* --- DASHBOARD --- */
+        #dashboard-ui { display: none; min-height: 100vh; background: #f4f7f6; color: #000; overflow-y: auto; }
+        .player-header { background: #222; color: #ffcc00; text-align: center; padding: 8px; font-size: 11px; font-weight: bold; font-family: 'Orbitron'; }
+        .db-nav { background: #fff; padding: 15px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        .play-card { margin: 30px 20px; padding: 60px 20px; background: #fff; border-radius: 30px; border: 5px solid #ffcc00; text-align: center; cursor: pointer; }
 
-        /* GAME AREA */
-        .game-box { width: 95%; height: 260px; background: radial-gradient(circle, #0f172a 0%, #05070a 100%); margin-top: 80px; border-radius: 15px; position: relative; border: 1px solid #1e293b; overflow: hidden; }
-        #mult-val { position: absolute; top: 38%; left: 50%; transform: translate(-50%, -50%); font-size: 65px; font-weight: 900; z-index: 10; text-shadow: 0 0 20px #000; }
-        canvas { width: 100%; height: 100%; }
+        /* --- GAME UI --- */
+        #crash-game-ui { display: none; position: fixed; inset: 0; background: #010409; z-index: 5000; }
+        .game-canvas-area { height: 55vh; margin: 5px; background: radial-gradient(circle, #1a2128, #010409); border-radius: 20px; position: relative; overflow: hidden; border: 1px solid #30363d; transition: 0.2s; }
+        #chart { width: 100%; height: 100%; }
+        #multiplier { position: absolute; width: 100%; text-align: center; top: 35%; font-family: 'Orbitron'; font-size: 80px; font-weight: 900; z-index: 10; pointer-events: none; }
+        #countdown { position: absolute; width: 100%; text-align: center; top: 65%; color: #ffcc00; font-family: 'Orbitron'; font-size: 18px; font-weight: bold; padding: 0 10px; z-index: 15; }
         
-        #status-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.8); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 50; }
-        .crash-txt { color: var(--red); font-size: 30px; font-weight: 900; margin-bottom: 10px; }
-        .win-txt { color: var(--green); font-size: 25px; font-weight: 900; }
+        .shake-crash { animation: shake 0.15s infinite; background: rgba(255, 0, 0, 0.4) !important; border: 2px solid #ff0000; }
+        @keyframes shake {
+            0% { transform: translate(2px, 2px) rotate(0deg); }
+            25% { transform: translate(-2px, -1px) rotate(-1deg); }
+            50% { transform: translate(-3px, 0px) rotate(1deg); }
+            75% { transform: translate(2px, 1px) rotate(-1deg); }
+            100% { transform: translate(1px, -2px) rotate(0deg); }
+        }
 
-        /* CONTROLS */
-        .control-unit { width: 95%; margin-top: 15px; background: #0e121a; padding: 15px; border-radius: 15px; border: 1px solid #1e293b; box-sizing: border-box; }
-        .amt-input-grp { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
-        .amt-btn { background: #1e293b; border: 1px solid #333; color: white; padding: 10px; border-radius: 8px; font-weight: bold; cursor: pointer; flex: 1; font-size: 12px; }
-        input { width: 100%; padding: 14px; background: #000; border: 1px solid #2d3748; color: var(--gold); border-radius: 10px; text-align: center; font-weight: bold; font-size: 18px; outline: none; }
+        .vfx-popup { position: absolute; width: 100%; text-align: center; top: 20%; font-size: 32px; font-weight: 900; z-index: 100; font-family: 'Orbitron'; text-shadow: 0 0 20px rgba(0,0,0,0.8); pointer-events: none; }
+        .pop-in { animation: popIn 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+        @keyframes popIn { 0% { transform: scale(0); opacity: 0; } 100% { transform: scale(1.2); opacity: 1; } }
+
+        .controls-panel { padding: 12px; background: #0d1117; position: absolute; bottom: 0; width: 100%; border-radius: 25px 25px 0 0; border-top: 1px solid #30363d; height: 35vh; }
+        .btn-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 5px; margin-bottom: 8px; }
+        .small-btn { padding: 8px !important; font-size: 12px !important; margin: 0 !important; }
+        #betInput { width: 100%; max-width: 200px; margin: 0 auto 10px auto; display: block; background: #000; color: #ffcc00; text-align: center; font-family: 'Orbitron'; font-size: 18px; padding: 8px; border-radius: 8px; border: 1px solid #333; }
+
+        #plist { height: 75px; overflow-y: auto; background: rgba(0,0,0,0.5); border-radius: 12px; padding: 8px; border: 1px solid #222; font-size: 10px; }
+        .p-row { display: grid; grid-template-columns: 1.5fr 1fr 1fr 1fr; padding: 5px 0; border-bottom: 1px solid #222; align-items: center; }
+        .p-win { color: #00ff88; font-weight: bold; }
         
-        .btn { width: 100%; padding: 16px; border: none; border-radius: 10px; font-weight: 900; cursor: pointer; transition: 0.2s; text-transform: uppercase; letter-spacing: 1px; }
-        .btn-blue { background: linear-gradient(90deg, #0052cc, #007bff); color: white; box-shadow: 0 5px 15px rgba(0,123,255,0.4); }
+        .overlay { position: fixed; inset: 0; background: #fff; color: #000; z-index: 8000; display: none; padding: 30px; text-align: center; }
+        #withdraw-approval-ui { position: fixed; inset: 0; background: #27ae60; z-index: 9999; display: none; flex-direction: column; align-items: center; justify-content: center; text-align: center; color: #fff; padding: 20px; }
     </style>
 </head>
 <body>
 
-    <div id="scr-load">
-        <div class="load-logo">CRASH LINE</div>
-        <div class="load-bar"><div class="load-fill"></div></div>
+    <audio id="app-music" src="app_background_song(48k).mp3" loop></audio>
+
+    <div id="loading-screen">
+        <h1 style="font-family:'Orbitron'; color:#ffcc00; text-shadow: 0 0 15px red;">BALL CRASH</h1>
+        <div class="load-bar"><div id="load-fill"></div></div>
+        <button id="start-sys-btn" class="btn-ui yellow" style="width:180px; margin-top:30px;" onclick="startLoading()">START SYSTEM</button>
     </div>
 
-    <div id="scr-auth" class="screen">
-        <div class="glass">
-            <h2 style="color:var(--blue); margin-bottom:20px;">CRASH LINE</h2>
-            <div id="auth-main">
-                <button class="btn btn-blue" style="margin-bottom:10px" onclick="showA('login')">LOGIN</button>
-                <button class="btn" style="background:#1e293b; color:white;" onclick="showA('reg')">REGISTER</button>
+    <div id="auth-container" class="hidden">
+        <div class="auth-card">
+            <div id="login-form">
+                <h2 style="color:#ffcc00; font-family:'Orbitron'; margin-bottom:15px;">LOGIN</h2>
+                <input type="text" id="l-id" placeholder="Player ID">
+                <input type="password" id="l-pass" placeholder="Password">
+                <button class="btn-ui red" onclick="login()">LOGIN</button>
+                <p onclick="showReg()" style="margin-top:15px; color:#888; font-size:12px; cursor:pointer;">No account? <span style="color:#ffcc00">Register</span></p>
             </div>
-            <div id="auth-reg" style="display:none;">
-                <p><input type="checkbox" id="age-check"> Confirm Over 18</p>
-                <button class="btn btn-blue" onclick="makeAccount()">CREATE ACCOUNT</button>
-                <button class="btn" style="background:none; color:#64748b; font-size:12px; margin-top:5px;" onclick="showA('main')">BACK</button>
+            <div id="reg-form" class="hidden">
+                <h2 style="color:#ffcc00; font-family:'Orbitron'; margin-bottom:15px;">REGISTER</h2>
+                <input type="password" id="r-pass" placeholder="Password (6+)">
+                <button class="btn-ui yellow" onclick="register()">CREATE ACCOUNT</button>
+                <p onclick="backToLogin()" style="margin-top:15px; color:#888; font-size:12px; cursor:pointer;">Back to Login</p>
             </div>
-            <div id="auth-login" style="display:none;">
-                <input type="text" id="l-id" placeholder="User ID" style="margin-bottom:8px;">
-                <input type="password" id="l-ps" placeholder="Password">
-                <button class="btn btn-blue" style="margin-top:10px" onclick="doLogin()">LOGIN</button>
-                <button class="btn" style="background:none; color:#64748b; font-size:12px; margin-top:5px;" onclick="showA('main')">BACK</button>
-            </div>
-            <div id="reg-done" style="display:none; background:var(--green); color:black; padding:20px; border-radius:15px;">
-                <h3 id="p-id" style="margin:5px 0;"></h3>
-                <p id="p-ps" style="margin:5px 0; font-weight:bold;"></p>
-                <button class="btn" style="background:black; color:white; margin-top:10px;" onclick="copyGo()">COPY & LOGIN</button>
+            <div id="reg-success" class="hidden">
+                <p style="color:#00ff88; font-weight:bold; margin-bottom:10px;">SUCCESS!</p>
+                <div style="background:#222; padding:15px; border-radius:10px; margin-bottom:15px; text-align:left; font-size:13px;">
+                    ID: <span id="gen-id" style="color:#ffcc00;"></span><br>
+                    PASS: <span id="gen-pass" style="color:#ffcc00;"></span>
+                </div>
+                <button class="btn-ui yellow" onclick="copyDetails()">COPY DETAILS</button>
+                <button class="btn-ui red" onclick="backToLogin()">GO TO LOGIN</button>
             </div>
         </div>
     </div>
 
-    <div id="scr-game" class="screen" style="justify-content:flex-start">
-        <div class="header">
-            <button onclick="nav('scr-wd')" style="background:var(--red); border:none; color:white; padding:8px 15px; border-radius:8px; font-weight:bold; font-size:12px;">WITHDRAW</button>
-            <div id="bal" class="bal-val">LKR 0.00</div>
-            <button onclick="window.open('https://t.me/UltraPodda')" style="background:var(--blue); border:none; color:white; padding:8px 15px; border-radius:8px; font-weight:bold; font-size:12px;">DEPOSIT</button>
-        </div>
-        <div class="game-box">
-            <div id="mult-val">1.00x</div>
-            <canvas id="gameCanvas"></canvas>
-            <div id="status-overlay"><div id="status-msg"></div></div>
-            <div id="next-timer" style="position:absolute; bottom:12px; right:12px; background:rgba(0,0,0,0.8); padding:5px 12px; border-radius:20px; font-size:11px; border:1px solid var(--blue);">Next: 10s</div>
-        </div>
-        <div class="control-unit">
-            <div class="amt-input-grp">
-                <button class="amt-btn" onclick="adj(20)">+20</button>
-                <button class="amt-btn" onclick="adj(100)">+100</button>
-                <button class="amt-btn" onclick="adj(500)">+500</button>
-                <button class="amt-btn" onclick="adj('max')">MAX</button>
+    <div id="dashboard-ui">
+        <div class="player-header">ID: <span id="id-txt">-----</span></div>
+        <div class="db-nav">
+            <button onclick="window.location.href='https://t.me/UltraPodda'" style="background:#0088cc; color:#fff; border:none; padding:10px 15px; border-radius:10px; font-weight:bold;">DEPOSIT</button>
+            <div style="text-align:center;">
+                <p style="font-size:10px; color:#888;">BALANCE</p>
+                <h2 id="db-bal" style="color:#27ae60; font-family:'Orbitron';">Rs. 0.00</h2>
             </div>
-            <input type="number" id="bet-amt" value="20">
-            <button id="bet-btn" class="btn btn-blue" style="margin-top:15px; height:60px;" onclick="handleAction()">PLACE BET</button>
+            <button onclick="openPage('withdraw-pg')" style="background:#ff3300; color:#fff; border:none; padding:10px 15px; border-radius:10px; font-weight:bold;">WITHDRAW</button>
         </div>
-        <div style="width:95%; margin-top:15px; font-size:12px; color:#64748b; font-weight:bold; padding-left:5px; display:flex; justify-content:space-between;">
-            <span>REAL PLAYERS HISTORY</span>
-            <span id="online-count" style="color:var(--green);">LOADING...</span>
+        <div class="play-card" onclick="launchGame()">
+            <h1 style="color:#ffcc00; font-family:'Orbitron'; font-size:35px;">PLAY CRASH</h1>
+            <p style="letter-spacing:5px; font-weight:bold; color:#aaa;">START EARNING</p>
         </div>
-        <div id="p-list" style="width:95%; height:150px; background:#080b12; margin-top:5px; border-radius:10px; overflow-y:auto; font-size:11px; border:1px solid #111;"></div>
+        <div style="padding:0 20px;">
+            <button onclick="window.location.href='https://t.me/UltraPodda'" style="width:100%; padding:15px; background:#fff; color:#0088cc; border:1px solid #0088cc; border-radius:15px; font-weight:bold; margin-bottom:10px;">💬 CONTACT ADMIN</button>
+            <button onclick="location.reload()" style="width:100%; padding:15px; background:#333; color:#fff; border:none; border-radius:15px; font-weight:bold;">LOGOUT</button>
+        </div>
     </div>
 
-    <div id="scr-wd" class="screen">
-        <div class="glass">
-            <h3>WITHDRAWAL</h3>
-            <input type="number" id="wd-amt" placeholder="Enter Amount (LKR)">
-            <button class="btn btn-blue" style="margin-top:10px" onclick="checkWithdraw()">REQUEST</button>
-            <button class="btn" style="background:none; color:#64748b;" onclick="nav('scr-game')">BACK</button>
-            <div id="wd-res" style="margin-top:15px; display:none; font-weight:bold;"></div>
+    <div id="crash-game-ui">
+        <div style="padding:10px; display:flex; justify-content:space-between; align-items:center;">
+            <button onclick="closeGame()" style="background:#21262d; color:#fff; border:none; padding:8px 12px; border-radius:8px; font-size:12px;">← BACK</button>
+            <div id="game-bal" style="color:#00ff88; font-family:'Orbitron'; font-weight:bold; font-size:14px;">Rs. 0.00</div>
+            <div style="width:40px"></div>
         </div>
+
+        <div class="game-canvas-area" id="vfx-wrap">
+            <div id="multiplier">1.00x</div>
+            <div id="countdown"></div>
+            <div id="vfx-layer"></div>
+            <canvas id="chart"></canvas>
+        </div>
+
+        <div class="controls-panel">
+            <div class="btn-grid">
+                <button class="btn-ui yellow small-btn" onclick="adj(20)">+20</button>
+                <button class="btn-ui yellow small-btn" onclick="adj(50)">+50</button>
+                <button class="btn-ui yellow small-btn" onclick="adj(100)">+100</button>
+                <button class="btn-ui yellow small-btn" onclick="set('max')">MAX</button>
+            </div>
+            
+            <input type="number" id="betInput" value="50">
+            
+            <button id="mainBtn" class="btn-ui red" style="margin:0 0 10px 0; padding:12px; font-size:18px; font-family:'Orbitron';" onclick="handleAction()">WAITING...</button>
+            
+            <div style="color: #888; font-size: 9px; font-weight: bold; margin-bottom: 5px; display: flex; justify-content: space-between; padding: 0 5px;">
+                <span>PLAYER</span><span>BET</span><span>ODD</span><span>WIN</span>
+            </div>
+            <div id="plist"></div>
+        </div>
+    </div>
+
+    <div id="withdraw-pg" class="overlay">
+        <h2>WITHDRAW</h2>
+        <p style="font-size:12px; color:#777; margin:10px 0;">Min: 1000 | Max: 49000 | Required Wager: 1.1x</p>
+        <input type="number" id="w-amt" placeholder="Amount (LKR)" style="border:1px solid #ddd; padding:15px; border-radius:10px; width:100%;">
+        <div id="w-status" style="margin:15px 0; font-weight:bold; font-size:14px;"></div>
+        <button id="w-btn" class="btn-ui red" onclick="startWithdraw()">CONFIRM</button>
+        <button class="btn-ui" style="background:#eee;" onclick="closeAll()">BACK</button>
+    </div>
+
+    <div id="withdraw-approval-ui">
+        <h1>APPROVED! ✅</h1>
+        <div class="receipt">
+            <p>ID: <span id="rec-id"></span></p>
+            <p>AMOUNT: <span id="rec-amt"></span></p>
+            <p>TIME: <span id="rec-time"></span></p>
+            <hr style="margin:10px 0; opacity:0.3;">
+            <p style="font-size:12px;">TAKE SCREENSHOT & SEND TO ADMIN</p>
+        </div>
+        <button class="btn-ui yellow" onclick="window.location.href='https://t.me/UltraPodda'">SEND VIA TELEGRAM</button>
     </div>
 
     <script>
-        // --- VPS & FIREBASE CONFIG ---
-        const VPS_URL = "https://crash.danuwa.online"; 
-        const fCfg = { databaseURL: "https://crash-ball-sri-lanka-default-rtdb.firebaseio.com/" };
-        firebase.initializeApp(fCfg);
+        const firebaseConfig = { databaseURL: "https://crash-ball-sri-lanka-default-rtdb.firebaseio.com/" };
+        firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
-        let user = null, isBet = false, isCash = false, isLive = false, curM = 1.0;
-        let totalW = 0, totalD = 0;
+        let uID = null, bal = 0, wager = 0, dep = 0;
+        let myBet = 0, isOut = false, currentM = 1.0, state = "waiting", pts = [];
+        const canvas = document.getElementById('chart');
+        const ctx = canvas.getContext('2d');
+        const ballImg = new Image(); ballImg.src = 'https://cdn-icons-png.flaticon.com/512/5351/5351336.png';
 
-        // Init
-        setTimeout(() => { document.getElementById('scr-load').style.display='none'; nav('scr-auth'); }, 3000);
-        function nav(id) { document.querySelectorAll('.screen').forEach(s => s.classList.remove('active')); document.getElementById(id).classList.add('active'); }
-        function showA(s) {
-            document.getElementById('auth-main').style.display = (s=='main'?'block':'none');
-            document.getElementById('auth-reg').style.display = (s=='reg'?'block':'none');
-            document.getElementById('reg-done').style.display = (s=='done'?'block':'none');
-            document.getElementById('auth-login').style.display = (s=='login'?'block':'none');
+        function startLoading() {
+            document.getElementById('app-music').play().catch(()=>{});
+            document.getElementById('start-sys-btn').style.display = 'none';
+            let p = 0;
+            let itv = setInterval(() => {
+                p += Math.random() * 15;
+                if(p >= 100) { p = 100; clearInterval(itv);
+                    setTimeout(() => {
+                        document.getElementById('loading-screen').classList.add('hidden');
+                        document.getElementById('auth-container').classList.remove('hidden');
+                    }, 500);
+                }
+                document.getElementById('load-fill').style.width = p + "%";
+            }, 100);
         }
 
-        // Account logic
-        function makeAccount() {
-            if(!document.getElementById('age-check').checked) return alert("Confirm Age!");
-            let id = "16" + Math.floor(10000000 + Math.random() * 89999999);
-            let ps = Math.random().toString(36).slice(-8);
-            db.ref('players/'+id).set({id, ps, balance:0, win:0, dep:0}).then(() => {
-                showA('done'); document.getElementById('p-id').innerText = id; document.getElementById('p-ps').innerText = "PS: " + ps;
+        function register() {
+            const p = document.getElementById('r-pass').value;
+            if(p.length < 6) return alert("Password too short!");
+            const id = "CB" + Math.floor(100000 + Math.random()*899999);
+            db.ref('players/'+id).set({id, pass: p, bal: 0, wager: 0, dep: 0}).then(() => {
+                document.getElementById('gen-id').innerText = id;
+                document.getElementById('gen-pass').innerText = p;
+                document.getElementById('reg-form').classList.add('hidden');
+                document.getElementById('reg-success').classList.remove('hidden');
             });
         }
 
-        function copyGo() {
-            const id = document.getElementById('p-id').innerText;
-            const ps = document.getElementById('p-ps').innerText.replace("PS: ", "");
-            navigator.clipboard.writeText(id + " | " + ps);
-            alert("Credentials Copied!"); showA('login');
-            document.getElementById('l-id').value = id;
-            document.getElementById('l-ps').value = ps;
-        }
-
-        function doLogin() {
-            let id = document.getElementById('l-id').value;
-            let ps = document.getElementById('l-ps').value;
+        function login() {
+            const id = document.getElementById('l-id').value;
+            const p = document.getElementById('l-pass').value;
             db.ref('players/'+id).once('value', s => {
-                let d = s.val();
-                if(d && d.ps == ps) {
-                    user = d;
-                    db.ref('players/'+id).on('value', sn => {
-                        let v = sn.val(); if(v){ user.balance = v.balance; totalW = v.win || 0; totalD = v.dep || 0;
-                        document.getElementById('bal').innerText = "LKR " + user.balance.toFixed(2); }
+                const d = s.val();
+                if(d && d.pass === p) {
+                    uID = id;
+                    document.getElementById('id-txt').innerText = id;
+                    document.getElementById('auth-container').classList.add('hidden');
+                    document.getElementById('dashboard-ui').style.display = 'block';
+                    db.ref('players/'+uID).on('value', snap => {
+                        const v = snap.val();
+                        bal = v.bal; wager = v.wager || 0; dep = v.dep || 0;
+                        document.getElementById('db-bal').innerText = "Rs. "+bal.toFixed(2);
+                        document.getElementById('game-bal').innerText = "Rs. "+bal.toFixed(2);
                     });
-                    nav('scr-game'); startRound();
-                } else alert("Error: User not found or wrong password.");
+                    initGameSync();
+                } else alert("Invalid Login!");
             });
         }
 
-        // --- REAL-TIME LIVE LIST ---
-        function updateLiveList() {
-            db.ref('players').on('value', (snapshot) => {
-                const players = snapshot.val();
-                let htmlStr = "";
-                if (players) {
-                    let pArray = Object.keys(players);
-                    document.getElementById('online-count').innerText = pArray.length + " ONLINE";
-                    pArray.reverse().slice(0,20).forEach(id => {
-                        let p = players[id];
-                        htmlStr += `<div style="padding:12px; border-bottom:1px solid #1a2233; display:flex; justify-content:space-between; align-items:center; background:rgba(0,123,255,0.02); margin-bottom:2px;">
-                            <span style="color:#64748b; font-family:monospace;">ID: ***${id.slice(-4)}</span>
-                            <span style="color:var(--green); font-weight:bold;">LKR ${parseFloat(p.balance || 0).toFixed(2)}</span>
-                        </div>`;
+        function initGameSync() {
+            db.ref('live_game/timer').on('value', s => {
+                let t = s.val() || 0;
+                const cd = document.getElementById('countdown');
+                if(state === "waiting" && t > 0) {
+                    // වෙනස් කරන ලද පණිවිඩය
+                    cd.innerHTML = `<span style="color:#ffcc00">NEXT ROUND IN ${t} SECONDS</span>`;
+                } else { cd.innerText = ""; }
+            });
+
+            db.ref('live_game/multiplier').on('value', s => {
+                currentM = s.val() || 1.0;
+                if(state === "running") draw();
+            });
+
+            db.ref('live_game/state').on('value', s => {
+                state = s.val();
+                const btn = document.getElementById('mainBtn');
+                const vfx = document.getElementById('vfx-layer');
+                const wrap = document.getElementById('vfx-wrap');
+
+                if(state === "waiting") {
+                    wrap.classList.remove('shake-crash'); vfx.innerHTML = ""; pts = []; isOut = false;
+                    btn.innerText = "PLACE BET"; btn.style.background = "#ffcc00"; btn.style.color = "#000"; btn.disabled = false;
+                    document.getElementById('multiplier').style.color = "white";
+                    document.getElementById('multiplier').innerText = "PREPARING";
+                } 
+                else if(state === "running") {
+                    wrap.classList.remove('shake-crash');
+                    if(btn.innerText === "PLACE BET") { 
+                        btn.innerText = "STARTED"; btn.disabled = true; btn.style.background = "#222"; btn.style.color = "#888";
+                    }
+                } 
+                else if(state === "crashed") {
+                    wrap.classList.add('shake-crash');
+                    // Multiplier එක ඇති තැන සහ Button එකේ "CRASH" ලෙස දිස්වේ
+                    document.getElementById('multiplier').style.color = "#ff3300";
+                    document.getElementById('multiplier').innerText = "CRASH";
+                    btn.innerText = "CRASH"; btn.disabled = true; btn.style.background = "#333";
+                    
+                    if(myBet > 0 && !isOut) {
+                        vfx.innerHTML = `<div class="vfx-popup pop-in" style="color:#00ff88;">BETTER LUCK NEXT TIME</div>`;
+                        setTimeout(() => vfx.innerHTML = "", 2500);
+                    }
+                    myBet = 0;
+                }
+            });
+
+            db.ref('live_game/players').on('value', s => {
+                const list = document.getElementById('plist');
+                list.innerHTML = "";
+                const players = s.val();
+                if(players) {
+                    Object.values(players).forEach(p => {
+                        let shortID = p.id ? p.id.slice(-4) : "....";
+                        let betAmt = p.bet || "0";
+                        let odd = p.out ? p.out + "x" : "---";
+                        let win = p.out ? "Rs." + (p.bet * p.out).toFixed(0) : "Waiting";
+                        let colorClass = p.out ? "p-win" : "";
+                        list.innerHTML += `
+                            <div class="p-row ${colorClass}">
+                                <span>👤 ${shortID}</span>
+                                <span>Rs.${betAmt}</span>
+                                <span>${odd}</span>
+                                <span>${win}</span>
+                            </div>`;
                     });
                 }
-                document.getElementById('p-list').innerHTML = htmlStr;
             });
-        }
-        updateLiveList();
-
-        // --- GAME SYSTEM ---
-        const cvs = document.getElementById('gameCanvas'); const ctx = cvs.getContext('2d');
-        cvs.width = 400; cvs.height = 260;
-
-        function adj(v) {
-            let cur = parseInt(document.getElementById('bet-amt').value) || 0;
-            if(v === 'max') document.getElementById('bet-amt').value = Math.floor(user.balance);
-            else document.getElementById('bet-amt').value = cur + v;
-        }
-
-        function startRound() {
-            isLive = false; isCash = false; curM = 1.0;
-            document.getElementById('bet-btn').innerText = "PLACE BET";
-            document.getElementById('bet-btn').style.background = "var(--blue)";
-            document.getElementById('status-overlay').style.display = 'none';
-            document.getElementById('mult-val').innerText = "1.00x";
-            
-            let t = 10;
-            let timer = setInterval(() => {
-                document.getElementById('next-timer').innerText = "Starting: " + t + "s";
-                if(t <= 0) { clearInterval(timer); runGame(); } t--;
-            }, 1000);
-        }
-
-        async function runGame() {
-            isLive = true;
-            let crashPoint = 1.10; 
-
-            try {
-                const res = await fetch(VPS_URL);
-                const data = await res.json();
-                crashPoint = parseFloat(data.crashAt);
-                console.log("VPS Linked Successfully");
-            } catch (e) {
-                crashPoint = (1.02 + Math.random() * 2).toFixed(2);
-                console.log("Using Local Logic (VPS Offline)");
-            }
-
-            let start = Date.now();
-            let loop = setInterval(() => {
-                let elapsed = (Date.now() - start) / 1000;
-                curM = Math.pow(1.075, elapsed * 1.5);
-                document.getElementById('mult-val').innerText = curM.toFixed(2) + "x";
-
-                ctx.clearRect(0,0,400,260);
-                ctx.beginPath(); ctx.strokeStyle = "#007bff"; ctx.lineWidth = 5;
-                ctx.moveTo(0, 260);
-                for(let i=0; i<elapsed*40; i++) ctx.lineTo(i*6, 260 - (Math.pow(1.075, (i/7)*1.5)*20));
-                ctx.stroke();
-
-                if(curM >= crashPoint) {
-                    clearInterval(loop); isLive = false;
-                    document.getElementById('status-overlay').style.display = 'flex';
-                    document.getElementById('status-msg').innerHTML = `<div class="crash-txt">CRASHED @ ${curM.toFixed(2)}x</div>`;
-                    if(isBet && !isCash) isBet = false; 
-                    setTimeout(startRound, 3000);
-                }
-            }, 60);
         }
 
         function handleAction() {
-            let amt = parseInt(document.getElementById('bet-amt').value);
-            if(!isLive && !isBet) {
-                if(!user || user.balance < amt || amt < 20) return alert("Balance too low!");
-                db.ref('players/'+user.id).update({balance: user.balance - amt});
-                isBet = true;
-                document.getElementById('bet-btn').innerText = "CASH OUT";
-                document.getElementById('bet-btn').style.background = "var(--green)";
-            } else if(isBet && !isCash && isLive) {
-                let winAmt = amt * curM;
-                totalW += winAmt;
-                db.ref('players/'+user.id).update({balance: user.balance + winAmt, win: totalW});
-                isCash = true;
-                document.getElementById('bet-btn').innerText = "WON!";
-                document.getElementById('status-overlay').style.display = 'flex';
-                document.getElementById('status-msg').innerHTML = `<div class="win-txt">WIN LKR ${winAmt.toFixed(2)}</div>`;
+            const btn = document.getElementById('mainBtn');
+            const amt = parseFloat(document.getElementById('betInput').value);
+            const vfx = document.getElementById('vfx-layer');
+
+            if(btn.innerText === "PLACE BET") {
+                if(amt > bal || amt < 20) return alert("Check Balance!");
+                myBet = amt;
+                db.ref('players/'+uID).update({ bal: bal - amt, wager: wager + amt });
+                db.ref('live_game/players/'+uID).set({ id: uID, bet: amt, out: null });
+                btn.innerText = "BET PLACED"; btn.disabled = true; btn.style.background = "#555";
+            } 
+            else if(btn.innerText === "CASH OUT") {
+                isOut = true;
+                let win = myBet * currentM;
+                db.ref('players/'+uID).update({ bal: bal + win });
+                db.ref('live_game/players/'+uID).update({ out: currentM.toFixed(2) });
+                
+                vfx.innerHTML = `<div class="vfx-popup pop-in" style="color:#ff3300;">GOOD JOB! 🏆</div>`;
+                setTimeout(() => vfx.innerHTML = "", 2500);
+
+                btn.innerText = "WIN: " + win.toFixed(0);
+                btn.style.background = "#00ff88"; btn.disabled = true;
             }
         }
 
-        function checkWithdraw() {
-            let amt = parseInt(document.getElementById('wd-amt').value);
-            let box = document.getElementById('wd-res');
-            box.style.display = "block";
-            if(totalW < (totalD * 1.1) || amt < 1000 || amt > user.balance) {
-                box.style.color = "red"; box.innerText = "Error: Turnover not reached or insufficient funds.";
-            } else {
-                db.ref('players/'+user.id).update({balance: user.balance - amt}).then(() => {
-                    box.style.color = "lime"; box.innerHTML = "REQUEST SENT SUCCESSFULLY! ✅";
-                });
+        function draw() {
+            document.getElementById('multiplier').innerText = currentM.toFixed(2) + "x";
+            canvas.width = canvas.offsetWidth; canvas.height = canvas.offsetHeight;
+            
+            let x = 40 + ((currentM - 1) / 5) * (canvas.width - 80);
+            let y = canvas.height - 40 - (Math.pow(currentM - 1, 1.25) * 40);
+            
+            pts.push({x, y});
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.strokeStyle = "#ffcc00"; ctx.lineWidth = 5; ctx.lineJoin = "round";
+            ctx.beginPath();
+            if(pts.length > 0) {
+                ctx.moveTo(pts[0].x, pts[0].y);
+                pts.forEach(p => ctx.lineTo(p.x, p.y));
             }
+            ctx.stroke();
+            ctx.drawImage(ballImg, x - 25, y - 25, 50, 50);
+
+            if(myBet > 0 && !isOut && state === "running") {
+                const btn = document.getElementById('mainBtn');
+                btn.innerText = "CASH OUT"; btn.disabled = false; btn.style.background = "#00ff88"; btn.style.color = "#000";
+            }
+        }
+
+        function adj(v) { document.getElementById('betInput').value = parseInt(document.getElementById('betInput').value) + v; }
+        function set(m) { if(m==='max') document.getElementById('betInput').value = Math.floor(bal); }
+        function showReg() { document.getElementById('login-form').classList.add('hidden'); document.getElementById('reg-form').classList.remove('hidden'); }
+        function backToLogin() { document.querySelectorAll('.auth-card > div').forEach(d=>d.classList.add('hidden')); document.getElementById('login-form').classList.remove('hidden'); }
+        function launchGame() { document.getElementById('dashboard-ui').style.display='none'; document.getElementById('crash-game-ui').style.display='block'; }
+        function closeGame() { document.getElementById('crash-game-ui').style.display='none'; document.getElementById('dashboard-ui').style.display='block'; }
+        function openPage(id) { document.getElementById(id).style.display = 'block'; }
+        function closeAll() { document.querySelectorAll('.overlay, #withdraw-approval-ui').forEach(o => o.style.display='none'); }
+        function copyDetails() {
+            const txt = `ID: ${document.getElementById('gen-id').innerText}\nPass: ${document.getElementById('gen-pass').innerText}`;
+            navigator.clipboard.writeText(txt); alert("Details Copied!");
+        }
+
+        function startWithdraw() {
+            const amt = parseFloat(document.getElementById('w-amt').value);
+            const status = document.getElementById('w-status');
+            const btn = document.getElementById('w-btn');
+            if(amt < 1000 || amt > 49000 || bal < amt) { status.innerText = "REJECTED ❌"; return; }
+            let reqWager = dep * 1.1;
+            if(wager < reqWager) { status.innerText = "NEED WAGER ❌"; return; }
+            btn.disabled = true; status.innerText = "UNDER REVIEW... ⏳";
+            setTimeout(() => {
+                bal -= amt; db.ref('players/'+uID).update({ bal: bal });
+                document.getElementById('rec-id').innerText = uID;
+                document.getElementById('rec-amt').innerText = "Rs. " + amt;
+                document.getElementById('rec-time').innerText = new Date().toLocaleTimeString();
+                document.getElementById('withdraw-pg').style.display = 'none';
+                document.getElementById('withdraw-approval-ui').style.display = 'flex';
+            }, 10000);
         }
     </script>
 </body>
